@@ -10,13 +10,12 @@ android {
         applicationId "com.xauusd.analyst"
         minSdk 21
         targetSdk 34
-        versionCode 13
-        versionName "13.0"
+        versionCode 14
+        versionName "13.1"
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix ""
             debuggable true
         }
         release {
@@ -33,5 +32,4 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 }

@@ -3,9 +3,6 @@ package com.xauusd.analyst;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
@@ -20,14 +17,11 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
-    private SwipeRefreshLayout swipeRefresh;
 
-    // Default server — bisa diubah di app via dialog
     private static final String PREF_KEY_URL = "server_url";
     private static final String DEFAULT_URL  = "http://192.168.1.5:8000";
 
@@ -35,16 +29,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        webView      = findViewById(R.id.webview);
-        swipeRefresh = findViewById(R.id.swipe_refresh);
-
+        // Layout langsung WebView tanpa SwipeRefresh
+        webView = new WebView(this);
+        setContentView(webView);
         setupWebView();
-        setupSwipeRefresh();
-
-        String url = getSavedUrl();
-        loadUrl(url);
+        loadUrl(getSavedUrl());
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -63,8 +52,6 @@ public class MainActivity extends AppCompatActivity {
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setSupportZoom(false);
-
-        // User agent — supaya server tahu ini WebView Android
         s.setUserAgentString(s.getUserAgentString() + " XAUUSDAnalystApp/13");
 
         webView.addJavascriptInterface(new AppInterface(), "AndroidApp");
@@ -72,40 +59,18 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
-                // Semua URL dibuka di dalam WebView
                 return false;
             }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                swipeRefresh.setRefreshing(false);
-            }
-
             @Override
             public void onReceivedError(WebView view, int errorCode, String desc, String failingUrl) {
-                swipeRefresh.setRefreshing(false);
                 showConnectionError();
             }
         });
 
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int progress) {
-                if (progress == 100) swipeRefresh.setRefreshing(false);
-            }
-        });
-
-        // Sembunyikan scrollbar bawaan (UI app punya scrollbar sendiri)
+        webView.setWebChromeClient(new WebChromeClient());
         webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
         webView.setHorizontalScrollBarEnabled(false);
-    }
-
-    private void setupSwipeRefresh() {
-        swipeRefresh.setColorSchemeColors(0xFFF5C842); // gold
-        swipeRefresh.setProgressBackgroundColorSchemeColor(0xFF111827);
-        swipeRefresh.setOnRefreshListener(() -> {
-            webView.reload();
-        });
+        webView.setBackgroundColor(0xFF0a0e1a);
     }
 
     private void loadUrl(String url) {
@@ -123,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
                 .edit().putString(PREF_KEY_URL, url).apply();
     }
 
-    /** Dialog untuk ganti IP server */
     public void showServerDialog() {
         String current = getSavedUrl();
         EditText input = new EditText(this);
@@ -163,27 +127,17 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    /** JavaScript Interface — dipanggil dari index.html */
     public class AppInterface {
         @JavascriptInterface
-        public void changeServer() {
-            runOnUiThread(() -> showServerDialog());
-        }
-
+        public void changeServer() { runOnUiThread(() -> showServerDialog()); }
         @JavascriptInterface
-        public String getServerUrl() {
-            return getSavedUrl();
-        }
-
+        public String getServerUrl() { return getSavedUrl(); }
         @JavascriptInterface
-        public void showToast(String msg) {
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show());
-        }
+        public void showToast(String msg) { runOnUiThread(() -> Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show()); }
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // Tombol Back → navigasi history WebView
         if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
             webView.goBack();
             return true;
@@ -191,21 +145,7 @@ public class MainActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        webView.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        webView.onPause();
-    }
-
-    @Override
-    protected void onDestroy() {
-        webView.destroy();
-        super.onDestroy();
-    }
+    @Override protected void onResume() { super.onResume(); webView.onResume(); }
+    @Override protected void onPause() { super.onPause(); webView.onPause(); }
+    @Override protected void onDestroy() { webView.destroy(); super.onDestroy(); }
 }
