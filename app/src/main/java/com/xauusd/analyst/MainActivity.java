@@ -3,6 +3,8 @@ package com.xauusd.analyst;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
@@ -59,6 +61,15 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                String url = req.getUrl().toString();
+                // Domain eksternal dibuka di browser luar
+                if (url.contains("exness.com") || url.contains("webtrade.exness.com")
+                        || url.contains("my.exness.com")) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    startActivity(intent);
+                    return true;
+                }
+                // URL lain tetap di WebView
                 return false;
             }
             @Override
