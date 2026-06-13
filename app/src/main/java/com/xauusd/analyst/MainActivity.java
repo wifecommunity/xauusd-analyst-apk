@@ -25,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
 
     private static final String PREF_KEY_URL = "server_url";
-    private static final String DEFAULT_URL  = "https://rcmaster92.netlify.app";
+    private static final String DEFAULT_URL  = "file:///android_asset/index.html";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadUrl(String url) {
-        if (!url.startsWith("http")) url = "http://" + url;
+        if (!url.startsWith("http") && !url.startsWith("file://")) url = "http://" + url;
         webView.loadUrl(url);
     }
 
