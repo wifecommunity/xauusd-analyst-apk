@@ -25,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
 
     private static final String PREF_KEY_URL = "server_url";
-    private static final String DEFAULT_URL  = "http://192.168.1.5:8000";
+    private static final String DEFAULT_URL  = "https://rcmaster92.netlify.app";
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
