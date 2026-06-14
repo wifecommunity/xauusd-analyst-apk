@@ -329,9 +329,9 @@
 
     <nav class="fixed bottom-0 left-0 right-0 h-[72px] bg-[#0b0f19]/95 backdrop-blur-md border-t border-purple-500/20 shadow-[0_-8px_30px_rgb(0,0,0,0.8)] flex items-center justify-between px-2 z-50 w-full max-w-xl mx-auto sm:rounded-t-2xl sm:border-x">
         
-        <button type="button" id="nav-chart" onclick="try{window.open('intent://my.exness.com/accounts/sign-in#Intent;scheme=https;action=android.intent.action.VIEW;end')}catch(e){window.location.href='https://my.exness.com/accounts/sign-in'}" class="flex flex-col items-center justify-center gap-1 text-emerald-400 font-medium transition-all duration-200 cursor-pointer flex-1 py-1 group">
-            <div class="p-1 rounded-lg bg-emerald-500/10 text-base group-hover:scale-110 transition-transform border border-emerald-500/20"><i class="fa-solid fa-chart-candlestick"></i></div>
-            <span class="text-[9px] font-semibold tracking-tight">Chart</span>
+        <button type="button" id="nav-news" onclick="openNewsPanel()" class="flex flex-col items-center justify-center gap-1 text-amber-400 font-medium transition-all duration-200 cursor-pointer flex-1 py-1 group">
+            <div class="p-1 rounded-lg bg-amber-500/10 text-base group-hover:scale-110 transition-transform border border-amber-500/20"><i class="fa-solid fa-newspaper"></i></div>
+            <span class="text-[9px] font-semibold tracking-tight">News</span>
         </button>
         
         <button type="button" onclick="switchEngineMode('ANALISIS')" id="nav-analisis" class="flex flex-col items-center justify-center gap-1 text-gray-400 font-medium transition-all duration-200 cursor-pointer flex-1 py-1 group">
@@ -820,15 +820,518 @@
             lastPrice = price;
         }
 
-        // Sync chart price badge with live price
-        const origProcessPrice = processPriceUpdate;
-
         sessionLbl.innerText = verifyTimeSession();
         fetchPriceTick();
 
         // Execution Core Loops Intervals
         setInterval(fetchPriceTick, 5000);
         setInterval(() => { sessionLbl.innerText = verifyTimeSession(); }, 20000);
+    </script>
+
+    <!-- NEWS PANEL OVERLAY -->
+    <style>
+    #news-panel { font-family: 'Space Grotesk', sans-serif; }
+    .news-hero { background: linear-gradient(135deg, #1a0a00 0%, #0f1629 40%, #060913 100%); position:relative; overflow:hidden; flex-shrink:0; }
+    .news-hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 20% 50%, rgba(245,158,11,0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(239,68,68,0.1) 0%, transparent 50%); pointer-events:none; }
+    .news-hero-glow { position:absolute; top:-20px; right:-20px; width:120px; height:120px; background:rgba(245,158,11,0.08); border-radius:50%; filter:blur(30px); }
+    .impact-pill-high { background:linear-gradient(135deg,rgba(239,68,68,0.2),rgba(239,68,68,0.05)); color:#ef4444; border:1px solid rgba(239,68,68,0.35); }
+    .impact-pill-medium { background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.05)); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); }
+    .impact-pill-low { background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(34,197,94,0.03)); color:#22c55e; border:1px solid rgba(34,197,94,0.3); }
+    .news-card { background:#0b0f19; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); transition:border-color 0.2s; position:relative; }
+    .news-card-high { border-left:3px solid #ef4444 !important; }
+    .news-card-medium { border-left:3px solid #f59e0b !important; }
+    .news-card-low { border-left:3px solid #22c55e !important; }
+    .forecast-box { background:#060913; border-radius:8px; padding:8px 12px; border:1px solid rgba(255,255,255,0.06); flex:1; }
+    .pulse-dot { width:8px; height:8px; border-radius:50%; display:inline-block; animation:pulse-anim 1.5s ease-in-out infinite; }
+    @keyframes pulse-anim { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+    .news-scroll::-webkit-scrollbar { width:3px; }
+    .news-scroll::-webkit-scrollbar-track { background:transparent; }
+    .news-scroll::-webkit-scrollbar-thumb { background:rgba(245,158,11,0.3); border-radius:10px; }
+    .tab-btn { padding:6px 14px; border-radius:20px; font-size:11px; font-weight:700; cursor:pointer; border:none; transition:all 0.2s; }
+    .tab-active { background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); }
+    .tab-inactive { background:transparent; color:#4b5563; border:1px solid transparent; }
+    </style>
+
+    <div id="news-panel" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:45; background:#060913; overflow:hidden;">
+
+        <!-- HEADER — fixed top -->
+        <div id="news-hdr" style="position:absolute; top:0; left:0; right:0; z-index:2; display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:#0b0f19; border-bottom:1px solid rgba(245,158,11,0.15);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:34px; height:34px; background:linear-gradient(135deg,#f59e0b,#d97706); border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(245,158,11,0.3);">
+                    <i class="fa-solid fa-bolt" style="font-size:15px; color:#fff;"></i>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <h3 style="font-size:14px; font-weight:800; color:#fff; margin:0; line-height:1; letter-spacing:-0.3px;">Market Intel</h3>
+                        <span style="font-size:9px; font-weight:700; background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); padding:1px 6px; border-radius:4px; letter-spacing:0.5px;">LIVE</span>
+                    </div>
+                    <p style="font-size:10px; color:#4b5563; margin:2px 0 0 0;">XAU/USD • Economic Calendar • 7 Days</p>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button onclick="refreshNews()" style="width:32px; height:32px; background:rgba(245,158,11,0.08); color:#f59e0b; border:1px solid rgba(245,158,11,0.15); border-radius:8px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-rotate-right" id="refresh-icon"></i>
+                </button>
+                <button onclick="closeNewsPanel()" style="width:32px; height:32px; background:rgba(239,68,68,0.08); color:#f87171; border:1px solid rgba(239,68,68,0.15); border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- FOOTER — fixed bottom -->
+        <div id="news-ftr" style="position:absolute; bottom:0; left:0; right:0; z-index:2; padding:10px 16px; background:#0b0f19; border-top:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#374151;">
+                <span class="pulse-dot" style="background:#22c55e; width:6px; height:6px;"></span>
+                <span>Real-time data</span>
+            </div>
+            <a href="https://www.investing.com/commodities/gold-news" target="_blank" style="padding:8px 16px; background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05)); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); border-radius:10px; font-size:11px; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:6px; letter-spacing:0.3px;">
+                <i class="fa-solid fa-globe"></i> Full Coverage
+            </a>
+        </div>
+
+        <!-- SCROLLABLE AREA — between header & footer, computed by JS -->
+        <div id="news-body" style="position:absolute; left:0; right:0; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+
+            <!-- HERO CARD -->
+            <div class="news-hero" style="padding:16px;">
+                <div class="news-hero-glow"></div>
+                <div style="position:relative; z-index:1;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                        <span style="font-size:9px; font-weight:800; letter-spacing:1.5px; color:#f59e0b; text-transform:uppercase;">⚡ Breaking News</span>
+                        <span style="height:1px; flex:1; background:linear-gradient(90deg,rgba(245,158,11,0.4),transparent);"></span>
+                        <span id="hero-time" style="font-size:10px; color:#4b5563;"></span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:3px; margin-bottom:10px;">
+                        <span id="hero-flag" style="font-size:18px; flex-shrink:0; margin-top:1px;">🇺🇸</span>
+                        <h2 id="hero-title" style="font-size:16px; font-weight:800; color:#fff; line-height:1.3; margin:0; letter-spacing:-0.3px;"></h2>
+                    </div>
+                    <p id="hero-summary" style="font-size:11px; color:#9ca3af; line-height:1.6; margin:0 0 12px;"></p>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <span id="hero-impact-badge" style="padding:4px 12px; border-radius:20px; font-size:10px; font-weight:800; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;"></span>
+                        <span id="hero-source" style="font-size:10px; color:#4b5563; background:rgba(255,255,255,0.04); padding:3px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);"></span>
+                        <div style="margin-left:auto; display:flex; gap:8px;">
+                            <div class="forecast-box" style="min-width:70px;">
+                                <div style="font-size:9px; color:#4b5563; font-weight:600; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.5px;">Forecast</div>
+                                <div id="hero-forecast" style="font-size:13px; font-weight:800; color:#e5e7eb;"></div>
+                            </div>
+                            <div class="forecast-box" style="min-width:70px;">
+                                <div style="font-size:9px; color:#4b5563; font-weight:600; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.5px;">Previous</div>
+                                <div id="hero-previous" style="font-size:13px; font-weight:800; color:#e5e7eb;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILTER TABS — sticky inside scroll -->
+            <div style="display:flex; align-items:center; gap:6px; padding:10px 16px; background:#0b0f19; border-bottom:1px solid rgba(255,255,255,0.04); border-top:1px solid rgba(255,255,255,0.04); overflow-x:auto; position:sticky; top:0; z-index:1;">
+                <button class="tab-btn tab-active" id="tab-all" onclick="filterNews('all')">All</button>
+                <button class="tab-btn tab-inactive" id="tab-high" onclick="filterNews('HIGH')"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block;margin-right:4px;"></span>High</button>
+                <button class="tab-btn tab-inactive" id="tab-medium" onclick="filterNews('MEDIUM')"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block;margin-right:4px;"></span>Medium</button>
+                <button class="tab-btn tab-inactive" id="tab-low" onclick="filterNews('LOW')"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px;"></span>Low</button>
+                <span style="margin-left:auto; font-size:10px; color:#374151;" id="news-last-updated"></span>
+            </div>
+
+            <!-- NEWS LIST -->
+            <div id="news-list" class="news-scroll" style="padding:12px 14px; display:flex; flex-direction:column; gap:9px;">
+                <div id="news-loading" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:200px; gap:14px;">
+                    <div style="width:44px; height:44px; border-radius:50%; border:3px solid rgba(245,158,11,0.15); border-top-color:#f59e0b; animation:spin 0.8s linear infinite;"></div>
+                    <span style="font-size:12px; color:#4b5563; letter-spacing:0.5px;">Memuat data pasar...</span>
+                </div>
+            </div>
+
+        </div><!-- end news-body -->
+    </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+
+    <!-- NEWS DETAIL MODAL -->
+    <div id="news-detail-modal" style="display:none; position:fixed; inset:0; z-index:60; background:rgba(0,0,0,0.85); align-items:flex-end; justify-content:center;">
+        <div id="news-detail-sheet" style="background:#0b0f19; border-radius:20px 20px 0 0; width:100%; max-width:480px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; border-top:1px solid rgba(245,158,11,0.2); transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);">
+            <!-- Handle -->
+            <div style="display:flex; justify-content:center; padding:10px 0 4px;">
+                <div style="width:36px; height:4px; background:rgba(255,255,255,0.12); border-radius:2px;"></div>
+            </div>
+            <!-- Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px 12px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="detail-impact-badge" style="padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800;"></span>
+                    <span id="detail-source" style="font-size:10px; color:#4b5563;"></span>
+                </div>
+                <button onclick="closeNewsDetail()" style="width:30px; height:30px; background:rgba(239,68,68,0.08); color:#f87171; border:1px solid rgba(239,68,68,0.15); border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <!-- Scrollable Content -->
+            <div style="overflow-y:auto; flex:1; padding:16px;" class="news-scroll">
+                <!-- Title -->
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <span id="detail-flag" style="font-size:22px; flex-shrink:0;"></span>
+                    <h2 id="detail-title" style="font-size:15px; font-weight:800; color:#fff; line-height:1.4; margin:0;"></h2>
+                </div>
+                <!-- Time & Currency -->
+                <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+                    <span id="detail-datetime" style="font-size:10px; color:#4b5563; background:rgba(255,255,255,0.04); padding:3px 9px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);"></span>
+                    <span id="detail-currency" style="font-size:10px; color:#6b7280; background:rgba(255,255,255,0.04); padding:3px 9px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);"></span>
+                </div>
+                <!-- Summary -->
+                <div style="background:#060913; border-radius:12px; padding:14px; margin-bottom:14px; border:1px solid rgba(255,255,255,0.05);">
+                    <div style="font-size:9px; font-weight:700; color:#4b5563; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">📝 Ringkasan Berita</div>
+                    <p id="detail-summary" style="font-size:12px; color:#d1d5db; line-height:1.7; margin:0;"></p>
+                </div>
+                <!-- Data Row -->
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
+                    <div style="background:#060913; border-radius:10px; padding:12px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                        <div style="font-size:9px; color:#4b5563; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">Forecast</div>
+                        <div id="detail-forecast" style="font-size:14px; font-weight:800; color:#e5e7eb; font-family:'Space Grotesk',sans-serif;"></div>
+                    </div>
+                    <div style="background:#060913; border-radius:10px; padding:12px; border:1px solid rgba(255,255,255,0.05); text-align:center;">
+                        <div style="font-size:9px; color:#4b5563; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">Previous</div>
+                        <div id="detail-previous" style="font-size:14px; font-weight:800; color:#e5e7eb; font-family:'Space Grotesk',sans-serif;"></div>
+                    </div>
+                    <div style="background:#060913; border-radius:10px; padding:12px; border:1px solid rgba(255,255,255,0.06); text-align:center;">
+                        <div style="font-size:9px; color:#4b5563; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">Actual</div>
+                        <div id="detail-actual" style="font-size:14px; font-weight:800; font-family:'Space Grotesk',sans-serif;"></div>
+                    </div>
+                </div>
+                <!-- Gold Analysis -->
+                <div id="detail-analysis-box" style="border-radius:12px; padding:14px; margin-bottom:10px;">
+                    <div style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; color:#f59e0b;">⚡ Analisa Dampak ke XAU/USD</div>
+                    <div id="detail-direction" style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                        <span id="detail-dir-icon" style="font-size:22px;"></span>
+                        <div>
+                            <div id="detail-dir-label" style="font-size:13px; font-weight:800; color:#fff;"></div>
+                            <div id="detail-dir-sub" style="font-size:10px; color:#9ca3af; margin-top:1px;"></div>
+                        </div>
+                    </div>
+                    <div id="detail-analysis-text" style="font-size:11px; line-height:1.7; color:#d1d5db;"></div>
+                </div>
+                <!-- Strategy Recommendation -->
+                <div style="background:rgba(99,102,241,0.08); border-radius:12px; padding:14px; border:1px solid rgba(99,102,241,0.2);">
+                    <div style="font-size:9px; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">🎯 Rekomendasi Strategi</div>
+                    <div id="detail-strategy" style="font-size:11px; color:#c7d2fe; line-height:1.7;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============ NEWS DATA ============
+    const NEWS_DATA = [
+        { impact:'HIGH', flag:'🇺🇸', currency:'USD', title:'Fed Minutes Signal Rate Hold Longer — Gold Surges Above Key Resistance', source:'Reuters', time:'2j lalu', date:'Jun 13', hour:'14:30', summary:'Federal Reserve minutes menunjukkan mayoritas anggota setuju mempertahankan suku bunga lebih lama. XAU/USD menembus resistance utama di $3,320 dengan volume tinggi.', forecast:'Hold', previous:'Hold', actual:'HAWKISH' },
+        { impact:'HIGH', flag:'🇺🇸', currency:'USD', title:'US CPI Data Miss Expectations — Gold Bulls Take Full Control', source:'Bloomberg', time:'5j lalu', date:'Jun 13', hour:'08:30', summary:'Inflasi AS 2.8% vs ekspektasi 3.1%. USD melemah tajam, emas naik ke tertinggi 3 bulan. Pasar pricing-in kemungkinan rate cut Q3 2025.', forecast:'3.1%', previous:'3.2%', actual:'2.8%' },
+        { impact:'HIGH', flag:'🇺🇸', currency:'USD', title:'US Jobs Report (NFP) Weaker Than Expected — Gold Jumps $28', source:'MarketWatch', time:'1h lalu', date:'Jun 12', hour:'08:30', summary:'Non-Farm Payrolls hanya 125K vs forecast 180K. Unemployment naik ke 4.1%. Emas melonjak $28 dalam 5 menit setelah rilis data.', forecast:'180K', previous:'206K', actual:'125K' },
+        { impact:'HIGH', flag:'🌍', currency:'XAU', title:'Geopolitical Escalation: Safe Haven Demand Drives Gold Higher', source:'CNBC', time:'3j lalu', date:'Jun 12', hour:'06:00', summary:'Ketegangan geopolitik meningkat signifikan di kawasan Timur Tengah dan Eropa Timur. Institutional buying terdeteksi dengan block order besar di level $3,280.', forecast:'—', previous:'—', actual:'BULLISH' },
+        { impact:'HIGH', flag:'🇺🇸', currency:'USD', title:'US Debt Ceiling Deadlock Returns — Dollar Slides, Gold Climbs', source:'WSJ', time:'1h lalu', date:'Jun 11', hour:'10:00', summary:'Kongres kembali buntu soal batas utang. Moody\'s memperingatkan potensi downgrade. USD index turun 0.8%, emas naik merespons kekhawatiran fiskal.', forecast:'—', previous:'—', actual:'RISK-OFF' },
+        { impact:'MEDIUM', flag:'🇨🇳', currency:'CNY', title:'PBOC Adds 6.2 Tons Gold to Reserves — 8th Consecutive Month', source:'FT', time:'2j lalu', date:'Jun 12', hour:'09:00', summary:'Bank sentral China terus akumulasi emas sebagai diversifikasi dari aset USD. Total cadangan kini mencapai 2,368 ton, tertinggi sepanjang sejarah.', forecast:'5T', previous:'4.8T', actual:'6.2T' },
+        { impact:'MEDIUM', flag:'🇺🇸', currency:'USD', title:'Goldman Sachs Revises Gold Target to $3,700 by Q4 2025', source:'GS Research', time:'4j lalu', date:'Jun 11', hour:'11:00', summary:'GS menaikkan target dari $3,500 ke $3,700 berdasarkan permintaan bank sentral yang terus meningkat, momentum safe haven, dan pelemahan struktural USD.', forecast:'$3,700', previous:'$3,500', actual:'UPGRADE' },
+        { impact:'MEDIUM', flag:'🇺🇸', currency:'USD', title:'Gold ETF Inflows Hit 3-Month High — Institutional Buyers Return', source:'WGC', time:'5j lalu', date:'Jun 11', hour:'08:00', summary:'World Gold Council melaporkan inflow ETF tertinggi dalam 3 bulan. SPDR Gold Shares tambah 9.4 ton dalam seminggu, menandai kembalinya minat institusional.', forecast:'+7T', previous:'+3.2T', actual:'+9.4T' },
+        { impact:'MEDIUM', flag:'🇪🇺', currency:'EUR', title:'ECB Signals 2 More Rate Cuts — Euro Weakens, Gold Supported', source:'ECB', time:'6j lalu', date:'Jun 10', hour:'12:45', summary:'ECB memberi sinyal 2 pemotongan suku bunga lagi di 2025. Euro melemah vs USD, secara tidak langsung mendukung harga emas dalam denominasi USD.', forecast:'-25bp', previous:'-25bp', actual:'DOVISH' },
+        { impact:'MEDIUM', flag:'🇮🇳', currency:'INR', title:'India Gold Demand Rises 21% YoY Ahead of Wedding Season', source:'WGC', time:'1h lalu', date:'Jun 10', hour:'07:00', summary:'Permintaan fisik emas India melonjak 21% year-on-year. Importasi emas India bulan Mei tercatat 78 ton, didorong musim pernikahan dan festival keagamaan.', forecast:'+15%', previous:'+12%', actual:'+21%' },
+        { impact:'LOW', flag:'🇺🇸', currency:'USD', title:'FOMC Member Williams: No Rush to Change Rates', source:'Fed', time:'7j lalu', date:'Jun 10', hour:'09:30', summary:'Presiden Fed New York menyatakan tidak ada urgensi mengubah kebijakan suku bunga saat ini. Komentar netral, dampak minimal terhadap harga emas.', forecast:'—', previous:'—', actual:'NEUTRAL' },
+        { impact:'LOW', flag:'🇺🇸', currency:'USD', title:'Technical: XAU/USD Breaks Above 50-Day MA — Next Target $3,380', source:'FXStreet', time:'3j lalu', date:'Jun 9', hour:'15:00', summary:'Secara teknikal, emas berhasil menembus dan menutup di atas MA-50 harian. RSI di 62 menunjukkan momentum positif. Target berikutnya resistance $3,380.', forecast:'—', previous:'$3,240', actual:'$3,295' },
+        { impact:'LOW', flag:'🇺🇸', currency:'USD', title:'Comex: Heavy Call Option Buying Above $3,400 Strike', source:'CME', time:'5j lalu', date:'Jun 9', hour:'12:00', summary:'Data positioning Comex menunjukkan akumulasi call options besar di atas $3,400. Ini mengindikasikan ekspektasi bullish kuat dari pelaku institusional untuk Q3.', forecast:'—', previous:'—', actual:'BULLISH' },
+        { impact:'LOW', flag:'🥈', currency:'XAG', title:'Silver Outperforms Gold — Au/Ag Ratio Drops to 76.4', source:'Kitco', time:'1h lalu', date:'Jun 9', hour:'10:00', summary:'Perak outperform emas minggu ini. Rasio gold/silver turun ke 76.4, level terendah 2 bulan. Analis mencatat pola historis di mana perak sering memimpin sebelum rally emas besar.', forecast:'79', previous:'80.2', actual:'76.4' },
+    ];
+
+    let currentFilter = 'all';
+
+    function getImpactConfig(impact) {
+        if (impact === 'HIGH') return { dot:'#ef4444', pillClass:'impact-pill-high', cardClass:'news-card-high', label:'HIGH IMPACT', icon:'🔴' };
+        if (impact === 'MEDIUM') return { dot:'#f59e0b', pillClass:'impact-pill-medium', cardClass:'news-card-medium', label:'MEDIUM', icon:'🟡' };
+        return { dot:'#22c55e', pillClass:'impact-pill-low', cardClass:'news-card-low', label:'LOW', icon:'🟢' };
+    }
+
+    function renderHero(item) {
+        const heroIdx = NEWS_DATA.indexOf(item);
+        const s = getImpactConfig(item.impact);
+        document.getElementById('hero-flag').textContent = item.flag;
+        document.getElementById('hero-title').textContent = item.title;
+        document.getElementById('hero-summary').textContent = item.summary;
+        document.getElementById('hero-time').textContent = item.date + ' • ' + item.hour;
+        document.getElementById('hero-source').textContent = '📡 ' + item.source;
+        document.getElementById('hero-forecast').textContent = item.forecast;
+        document.getElementById('hero-previous').textContent = item.previous;
+        const badge = document.getElementById('hero-impact-badge');
+        badge.className = 'impact-pill-' + item.impact.toLowerCase();
+        badge.style.cssText = 'padding:4px 12px; border-radius:20px; font-size:10px; font-weight:800; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;';
+        badge.innerHTML = `<span class="pulse-dot" style="background:${s.dot}; width:7px; height:7px;"></span> ${s.icon} ${s.label}`;
+        // Make hero tappable
+        const heroEl = document.querySelector('.news-hero');
+        if (heroEl) {
+            heroEl.style.cursor = 'pointer';
+            heroEl.onclick = () => openNewsDetail(heroIdx);
+        }
+    }
+
+    function renderNewsList(data) {
+        const list = document.getElementById('news-list');
+        document.getElementById('news-loading').style.display = 'none';
+        Array.from(list.children).forEach(c => { if (c.id !== 'news-loading') c.remove(); });
+
+        const filtered = currentFilter === 'all' ? data : data.filter(d => d.impact === currentFilter);
+
+        filtered.forEach((item, idx) => {
+            if (idx === 0) return; // skip hero item
+            const realIdx = NEWS_DATA.indexOf(item);
+            const s = getImpactConfig(item.impact);
+            const card = document.createElement('div');
+            card.className = 'news-card ' + s.cardClass;
+            card.style.cursor = 'pointer';
+            card.onclick = () => openNewsDetail(realIdx);
+            card.innerHTML = `
+                <div style="padding:12px 14px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px; flex-wrap:wrap;">
+                        <span style="font-size:16px;">${item.flag}</span>
+                        <span style="font-size:9px; font-weight:700; color:#374151; background:rgba(255,255,255,0.04); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.06);">${item.currency}</span>
+                        <span class="${s.pillClass}" style="padding:2px 9px; border-radius:20px; font-size:9px; font-weight:700; display:flex; align-items:center; gap:4px;">
+                            <span style="width:5px;height:5px;border-radius:50%;background:${s.dot};display:inline-block;"></span>${s.icon} ${s.label}
+                        </span>
+                        <span style="margin-left:auto; font-size:9px; color:#374151;">${item.date} ${item.hour}</span>
+                    </div>
+                    <p style="font-size:12px; font-weight:700; color:#e5e7eb; line-height:1.4; margin:0 0 6px;">${item.title}</p>
+                    <p style="font-size:10px; color:#6b7280; line-height:1.55; margin:0 0 10px;">${item.summary}</p>
+                    <div style="display:flex; gap:6px; align-items:stretch;">
+                        <div class="forecast-box" style="flex:1;">
+                            <div style="font-size:8px; color:#374151; font-weight:700; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.8px;">Forecast</div>
+                            <div style="font-size:12px; font-weight:800; color:#e5e7eb;">${item.forecast}</div>
+                        </div>
+                        <div class="forecast-box" style="flex:1;">
+                            <div style="font-size:8px; color:#374151; font-weight:700; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.8px;">Previous</div>
+                            <div style="font-size:12px; font-weight:800; color:#e5e7eb;">${item.previous}</div>
+                        </div>
+                        <div class="forecast-box" style="flex:1;">
+                            <div style="font-size:8px; color:#374151; font-weight:700; margin-bottom:2px; text-transform:uppercase; letter-spacing:0.8px;">Actual</div>
+                            <div style="font-size:12px; font-weight:800; color:${s.dot};">${item.actual}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right; margin-top:8px;">
+                        <span style="font-size:10px; color:#818cf8; background:rgba(99,102,241,0.08); padding:3px 10px; border-radius:6px; border:1px solid rgba(99,102,241,0.15);">
+                            <i class="fa-solid fa-chart-line" style="margin-right:4px;"></i>Lihat Analisa →
+                        </span>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+        if (filtered.length <= 1) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'text-align:center; padding:40px 20px; color:#374151; font-size:12px;';
+            empty.innerHTML = '<i class="fa-solid fa-filter" style="font-size:24px; margin-bottom:8px; display:block; color:#1f2937;"></i>Tidak ada data untuk filter ini';
+            list.appendChild(empty);
+        }
+
+        document.getElementById('news-last-updated').textContent = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+    }
+
+    function filterNews(type) {
+        currentFilter = type;
+        ['all','high','medium','low'].forEach(t => {
+            const btn = document.getElementById('tab-' + t);
+            if (btn) { btn.className = 'tab-btn ' + (t === type.toLowerCase() ? 'tab-active' : 'tab-inactive'); }
+        });
+        renderNewsList(NEWS_DATA);
+    }
+
+    function openNewsDetail(idx) {
+        const item = NEWS_DATA[idx];
+        if (!item) return;
+        const s = getImpactConfig(item.impact);
+
+        // Populate fields
+        document.getElementById('detail-flag').textContent = item.flag;
+        document.getElementById('detail-title').textContent = item.title;
+        document.getElementById('detail-datetime').textContent = item.date + ' • ' + item.hour;
+        document.getElementById('detail-currency').textContent = '💱 ' + item.currency;
+        document.getElementById('detail-summary').textContent = item.summary;
+        document.getElementById('detail-source').textContent = '📡 ' + item.source;
+        document.getElementById('detail-forecast').textContent = item.forecast;
+        document.getElementById('detail-previous').textContent = item.previous;
+        document.getElementById('detail-actual').textContent = item.actual;
+
+        // Impact badge
+        const badge = document.getElementById('detail-impact-badge');
+        badge.textContent = s.icon + ' ' + s.label;
+        badge.className = 'impact-pill-' + item.impact.toLowerCase();
+        badge.style.cssText = 'padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800;';
+
+        // Actual color
+        const actualEl = document.getElementById('detail-actual');
+        actualEl.style.color = s.dot;
+
+        // Analysis logic
+        const analysisBox = document.getElementById('detail-analysis-box');
+        const dirIcon = document.getElementById('detail-dir-icon');
+        const dirLabel = document.getElementById('detail-dir-label');
+        const dirSub = document.getElementById('detail-dir-sub');
+        const analysisText = document.getElementById('detail-analysis-text');
+        const strategyEl = document.getElementById('detail-strategy');
+
+        let isBullish = ['BULLISH','RISK-OFF','UPGRADE','DOVISH','HAWKISH'].includes(item.actual) ||
+            (item.impact === 'HIGH' && item.currency === 'USD' && (item.actual < item.forecast));
+
+        const isRiskOff = item.actual === 'RISK-OFF';
+        const isHawkish = item.actual === 'HAWKISH';
+
+        let direction, bgColor, iconStr, labelStr, subStr, analysisStr, strategyStr;
+
+        if (isRiskOff || item.title.toLowerCase().includes('geopolit') || item.title.toLowerCase().includes('safe haven')) {
+            direction = 'bullish';
+        } else if (isHawkish || (item.currency === 'USD' && item.impact === 'HIGH')) {
+            direction = parseFloat(item.actual) > parseFloat(item.forecast) ? 'bearish' : 'bullish';
+            if (isNaN(parseFloat(item.actual))) direction = (item.actual === 'HAWKISH') ? 'bearish' : 'bullish';
+        } else if (item.actual === 'UPGRADE') {
+            direction = 'bullish';
+        } else if (item.actual === 'DOVISH') {
+            direction = 'bullish';
+        } else if (item.actual === 'NEUTRAL') {
+            direction = 'neutral';
+        } else {
+            direction = 'bullish';
+        }
+
+        if (direction === 'bullish') {
+            bgColor = 'rgba(16,185,129,0.08)';
+            iconStr = '📈';
+            labelStr = 'BULLISH untuk XAU/USD';
+            dirLabel.style.color = '#10b981';
+            subStr = 'Tekanan naik diperkirakan pada harga emas';
+            analysisStr = generateAnalysis(item, 'bullish');
+            strategyStr = generateStrategy(item, 'bullish');
+        } else if (direction === 'bearish') {
+            bgColor = 'rgba(239,68,68,0.08)';
+            iconStr = '📉';
+            labelStr = 'BEARISH untuk XAU/USD';
+            dirLabel.style.color = '#ef4444';
+            subStr = 'Tekanan turun diperkirakan pada harga emas';
+            analysisStr = generateAnalysis(item, 'bearish');
+            strategyStr = generateStrategy(item, 'bearish');
+        } else {
+            bgColor = 'rgba(245,158,11,0.08)';
+            iconStr = '⚖️';
+            labelStr = 'NETRAL untuk XAU/USD';
+            dirLabel.style.color = '#f59e0b';
+            subStr = 'Dampak terbatas, pasar cenderung sideways';
+            analysisStr = generateAnalysis(item, 'neutral');
+            strategyStr = generateStrategy(item, 'neutral');
+        }
+
+        analysisBox.style.background = bgColor;
+        analysisBox.style.border = '1px solid ' + (direction === 'bullish' ? 'rgba(16,185,129,0.2)' : direction === 'bearish' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)');
+        dirIcon.textContent = iconStr;
+        dirLabel.textContent = labelStr;
+        dirSub.textContent = subStr;
+        analysisText.innerHTML = analysisStr;
+        strategyEl.innerHTML = strategyStr;
+
+        // Show modal
+        const modal = document.getElementById('news-detail-modal');
+        const sheet = document.getElementById('news-detail-sheet');
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => {
+            sheet.style.transform = 'translateY(0)';
+        });
+    }
+
+    function generateAnalysis(item, dir) {
+        const lines = {
+            bullish: [
+                `<b>📊 Fundamental:</b> Berita ini menciptakan tekanan jual pada USD, yang secara inverse mendorong harga emas naik. Investor cenderung berpindah ke aset safe haven seperti XAU/USD.`,
+                `<br><br><b>🏛️ Institusional:</b> Ekspektasi adalah institutional buyer akan mulai akumulasi di area support terdekat. Watch for block orders dan spike volume sebagai konfirmasi.`,
+                `<br><br><b>⏱️ Time Horizon:</b> Dampak biasanya terasa dalam <b>15–60 menit</b> setelah rilis, dengan follow-through hingga 4–8 jam ke depan tergantung sentiment global.`
+            ],
+            bearish: [
+                `<b>📊 Fundamental:</b> Data ini memperkuat USD, yang secara inverse menekan harga emas. Hawkish stance dari Fed atau data ekonomi kuat biasanya negatif untuk XAU/USD jangka pendek.`,
+                `<br><br><b>🏛️ Institusional:</b> Potensi distribusi (sell) dari institusi di level resistance. Watch for rejection candle dan high volume pada level supply zone.`,
+                `<br><br><b>⏱️ Time Horizon:</b> Tekanan bearish dapat berlangsung <b>30 menit–4 jam</b>. Namun bias jangka menengah emas masih bullish secara struktural.`
+            ],
+            neutral: [
+                `<b>📊 Fundamental:</b> Data ini tidak memberikan kejutan signifikan terhadap ekspektasi pasar. Reaksi harga emas kemungkinan terbatas dan bersifat sementara.`,
+                `<br><br><b>🏛️ Institusional:</b> Tidak ada sinyal posisi besar yang terlihat. Pasar kemungkinan konsolidasi menunggu katalis berikutnya.`,
+                `<br><br><b>⏱️ Time Horizon:</b> Volatilitas rendah. <b>Hindari trading</b> segera setelah rilis ini, tunggu konfirmasi arah berikutnya.`
+            ]
+        };
+        return (lines[dir] || lines.neutral).join('');
+    }
+
+    function generateStrategy(item, dir) {
+        if (dir === 'bullish') {
+            return `✅ <b>BUY LIMIT</b> — Cari entry di area retracement / support terdekat.<br>
+📍 <b>Entry zona:</b> Pullback ke OB atau FVG bullish terdekat.<br>
+🛡️ <b>Stop Loss:</b> Di bawah swing low terbaru + buffer 1x ATR.<br>
+💰 <b>Target:</b> TP1 = level resistance terdekat | TP2 = premium zone H4.<br>
+⚠️ <b>Catatan:</b> Tunggu konfirmasi candle M5/M15 sebelum eksekusi.`;
+        } else if (dir === 'bearish') {
+            return `🔻 <b>SELL LIMIT</b> — Cari entry di area rejection / resistance terdekat.<br>
+📍 <b>Entry zona:</b> Rejection dari OB atau FVG bearish terdekat.<br>
+🛡️ <b>Stop Loss:</b> Di atas swing high terbaru + buffer 1x ATR.<br>
+💰 <b>Target:</b> TP1 = support terdekat | TP2 = discount zone H4.<br>
+⚠️ <b>Catatan:</b> Validasi dengan RSI overbought + rejection candle.`;
+        } else {
+            return `⚖️ <b>STANDBY / NO TRADE</b> — Data netral, tidak ada setup valid saat ini.<br>
+📍 Tunggu pembentukan struktur yang lebih jelas di M15 atau H1.<br>
+🔍 Pantau level support/resistance utama untuk breakout atau rejection.<br>
+⚠️ <b>Catatan:</b> Pasar mungkin ranging. Hindari counter-trend entries.`;
+        }
+    }
+
+    function closeNewsDetail() {
+        const sheet = document.getElementById('news-detail-sheet');
+        sheet.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+            document.getElementById('news-detail-modal').style.display = 'none';
+        }, 300);
+    }
+
+    // Close modal when tapping backdrop
+    document.getElementById('news-detail-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeNewsDetail();
+    });
+
+    function layoutNewsBody() {
+        const hdr = document.getElementById('news-hdr');
+        const ftr = document.getElementById('news-ftr');
+        const body = document.getElementById('news-body');
+        if (!hdr || !ftr || !body) return;
+        const hdrH = hdr.getBoundingClientRect().height;
+        const ftrH = ftr.getBoundingClientRect().height;
+        body.style.top = hdrH + 'px';
+        body.style.bottom = ftrH + 'px';
+    }
+
+    function openNewsPanel() {
+        const panel = document.getElementById('news-panel');
+        panel.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(layoutNewsBody);
+        document.getElementById('news-loading').style.display = 'flex';
+        Array.from(document.getElementById('news-list').children).forEach(c => { if (c.id !== 'news-loading') c.remove(); });
+        currentFilter = 'all';
+        ['all','high','medium','low'].forEach(t => {
+            const btn = document.getElementById('tab-' + t);
+            if (btn) btn.className = 'tab-btn ' + (t === 'all' ? 'tab-active' : 'tab-inactive');
+        });
+        // Hero — pilih berita HIGH IMPACT pertama
+        const hero = NEWS_DATA.find(d => d.impact === 'HIGH') || NEWS_DATA[0];
+        renderHero(hero);
+        setTimeout(() => renderNewsList(NEWS_DATA), 700);
+    }
+
+    function closeNewsPanel() {
+        document.getElementById('news-panel').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function refreshNews() {
+        const icon = document.getElementById('refresh-icon');
+        icon.style.animation = 'spin 0.5s linear infinite';
+        document.getElementById('news-loading').style.display = 'flex';
+        Array.from(document.getElementById('news-list').children).forEach(c => { if (c.id !== 'news-loading') c.remove(); });
+        setTimeout(() => {
+            icon.style.animation = '';
+            renderNewsList(NEWS_DATA);
+        }, 700);
+    }
     </script>
 </body>
 </html>
